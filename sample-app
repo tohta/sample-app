@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+# Mackerel
+
+if ENV['MACKEREL_AGENT_PLUGIN_META'] == '1'
+  require 'json'
+
+  meta = {
+    :graphs => {
+      'sampleapp.app' => {
+        :label   => 'sampleapp_ACTIVE_USERS',
+        :unit    => 'integer',
+        :metrics => [
+          {
+            :name  => 'login.active',
+            :label => 'Active Users'
+          }
+        ]
+      }
+    }
+  }
+
+  puts '# mackerel-agent-plugin'
+  puts meta.to_json
+  exit 0
+end
+
+# logfile
+today = Time.now.strftime('%Y_%m_%d')
+logfile = %!/usr/local/jetty/logs/#{today}.stderrout.log!
+
+
+# target range
+# d = Time.now - 60 * 10 # 10 min ago
+# time_range = d.strftime('%Y/%m/%d %H:%M').chop
+d = Time.now - 60 # 1 min ago
+time_range = d.strftime('%Y/%m/%d %H:%M')
+
+# trim (time basis)
+log_trimed = File.readlines(logfile).grep(/#{time_range}/)
+
+# extract customer ids
+ids = []
+log_trimed.each do |line|
+  if id = line.match(%r{\[INFO \] \[([0-9]{8})\]})
+    ids.push(id[1])
+  end
+end
+
+# print result
+puts ['sampleapp.app.login.active_users', ids.uniq.size, Time.now.to_i].join("\t")
